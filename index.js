@@ -11,13 +11,14 @@
 
 
 
+const PORT = process.env.PORT || 5000
 const express = require('express');
 const path = require('path')
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
-app.set('port', (process.env.PORT || 5000));
+app.set('port', PORT);
 
 app.use(express.static(__dirname + '/public'));
 
@@ -246,8 +247,8 @@ const createMessage = (name, message, correctAnswer, firstTimeAnswer, alreadyAns
   return tempMessage;
 }
 
-http.listen(app.get('port'), () => {
-  console.log("Server is listening on port 3035");
+http.listen(PORT, () => {
+  console.log("Server is listening on port ${ PORT }");
 });
 
 
