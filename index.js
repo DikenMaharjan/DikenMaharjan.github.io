@@ -298,7 +298,7 @@ io.on("connection", (socket) => {
       }
       else {
         if (message.toLowerCase() == chosenWord.toLowerCase()) {
-          message = createMessage(name, " guessed the word.", true, true, true);
+          message = createMessage(name, " guessed the word.", true, true, false);
           io.to(room).emit("yourMessage", JSON.stringify(message));
           answered[room][socket.id] = parseInt(time);
           if (Object.keys(answered[room]).length == numberOfPlayers[room]) {
