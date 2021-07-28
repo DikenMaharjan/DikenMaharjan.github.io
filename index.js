@@ -247,9 +247,6 @@ const createMessage = (name, message, correctAnswer, firstTimeAnswer, alreadyAns
   return tempMessage;
 }
 
-http.listen(PORT, () => {
-  console.log("Server is listening on port ${ PORT }");
-});
 
 
 io.on("connection", (socket) => {
@@ -455,3 +452,8 @@ io.on("connection", (socket) => {
 
 })
 
+
+
+http.listen(PORT, () => {
+  console.log(`Listening on ${PORT}`);
+});
