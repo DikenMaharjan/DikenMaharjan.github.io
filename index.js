@@ -49,7 +49,7 @@ function startChooseWordTimer(drawerID) {
   let room = socketRooms[drawerID];
   io.to(room).emit("roundInformation",
     connInf[room].gameState.drawerName,
-    connInf[room].gameState.round,
+    connInf[room].gameState.round + 1,
     myConstants.rounds[connInf[room].gameInformations.rounds]);
   connInf[room].chooseRemainingTime = 15;
   connInf[room].chooseTimer = setInterval(() => {
@@ -109,9 +109,9 @@ function showScore(room) {
 
   let allIds = Object.keys(connInf[room].allPlayers);
   let totalPlayers = allIds.length;
-  console.log(allIds);
+
   allIds.forEach((id) => {
-    console.log("duwa");
+
     if (!(id in connInf[room].answered)) {
       connInf[room].answered[id] = 0
     }
@@ -139,7 +139,7 @@ function showScore(room) {
   }
   finalScore.nameList.push(connInf[room].allPlayers[idArray[0]].name);
   finalScore.scoreList.push(Math.round(sumOfTime / (totalPlayers * totalTime) * finalScore.scoreList[0]));
-  console.log(finalScore);
+
 
   io.to(room).emit("showScore", JSON.stringify(finalScore), word);
   connInf[room].answered = {};
@@ -159,7 +159,7 @@ function showScore(room) {
       finalRound = initialRound;
     }
     io.to(room).emit(myConstants.RENEW_BOARD);
-    if (finalRound == totalRounds + 1) {
+    if (finalRound == totalRounds) {
       io.to(room).emit("gameFinished");
     } else {
       connInf[room].gameState = creator.createGameState
@@ -182,7 +182,6 @@ io.on("connection", (socket) => {
   console.log("Connected");
 
   socket.on("message", (text, time) => {
-    console.log(connInf);
     let room = socketRooms[socket.id];
     let name = connInf[room].allPlayers[socket.id].name;
     let chosenWord = connInf[room].gameState.chosenWord;
@@ -289,7 +288,6 @@ io.on("connection", (socket) => {
     connInf[room].allPlayers[socket.id] = p;
     connInf[room].numberOfPlayers += 1;
     connInf[room].playerTurns.push(socket.id);
-    console.log(room);
 
     socket.join(room);
     callback(JSON.stringify(p));
