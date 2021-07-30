@@ -64,8 +64,8 @@ function startChooseWordTimer(drawerID) {
 }
 
 function startGameTimer(room) {
-  //connInf[room].gameRemainingTime = myConstants.time[connInf[room].gameInformations.time];
-  connInf[room].gameRemainingTime = 10;
+  connInf[room].gameRemainingTime = myConstants.time[connInf[room].gameInformations.time];
+
 
   connInf[room].gameTimer = setInterval(() => {
     let remainingTime = connInf[room].gameRemainingTime;
