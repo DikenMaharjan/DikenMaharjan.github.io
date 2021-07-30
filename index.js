@@ -34,6 +34,10 @@ var socketRooms = {
 
 
 const chooseWord = (room) => {
+  io.to(room).emit("roundInformation",
+    connInf[room].gameState.drawerName,
+    connInf[room].gameState.round + 1,
+    myConstants.rounds[connInf[room].gameInformations.rounds]);
   let drawerID = connInf[room].gameState.drawerId;
   io.to(drawerID).emit("chooseWordTimer", 15);
   io.to(room).emit("chooseWord",
@@ -47,10 +51,7 @@ const chooseWord = (room) => {
 
 function startChooseWordTimer(drawerID) {
   let room = socketRooms[drawerID];
-  io.to(room).emit("roundInformation",
-    connInf[room].gameState.drawerName,
-    connInf[room].gameState.round + 1,
-    myConstants.rounds[connInf[room].gameInformations.rounds]);
+
   connInf[room].chooseRemainingTime = 15;
   connInf[room].chooseTimer = setInterval(() => {
     connInf[room].chooseRemainingTime -= 1;
