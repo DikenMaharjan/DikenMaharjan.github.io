@@ -14,13 +14,12 @@ export const createGameState = (round, turn, ready, drawerName, drawerId, chosen
 
 
 
-export const createPlayer = (name, host, socketId) => {
+export const createPlayer = (name, host, socketId, ready) => {
     var player = {};
     player.name = name;
-    player.score = 0;
-    player.answered = false;
     player.host = host;
     player.socketId = socketId;
+    player.ready = ready;
     return player;
 };
 
@@ -32,4 +31,14 @@ export const createMessage = (name, message, correctAnswer, firstTimeAnswer, alr
     tempMessage.firstTimeAnswer = firstTimeAnswer;
     tempMessage.alreadyAnswered = alreadyAnswered;
     return tempMessage;
+}
+
+export const createScore = (name, answered, score, drawing, id) => {
+    let tempScore = {};
+    tempScore.name = name;
+    tempScore.answered = answered;
+    tempScore.score = score;
+    tempScore.drawing = drawing;
+    tempScore.id = id;
+    return tempScore;
 }

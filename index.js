@@ -34,6 +34,7 @@ var socketRooms = {
 
 
 const chooseWord = (room) => {
+  io.to(room).emit("totalScores", connInf[room].score);
   io.to(room).emit("roundInformation",
     connInf[room].gameState.drawerName,
     connInf[room].gameState.round + 1,
@@ -136,10 +137,14 @@ function showScore(room) {
       finalScore.nameList.push(connInf[room].allPlayers[idArray[i]].name);
       finalScore.scoreList.push(Math.round(((connInf[room].answered[idArray[i]] + (totalTime / 2)) / totalTime) * 350 - (i * 25)));
     }
+    console.log(connInf[room].score);
     sumOfTime += connInf[room].answered[idArray[i]];
+    connInf[room].score[idArray[i]].score += finalScore.scoreList[i - 1];
   }
   finalScore.nameList.push(connInf[room].allPlayers[idArray[0]].name);
   finalScore.scoreList.push(Math.round(sumOfTime / (totalPlayers * totalTime) * finalScore.scoreList[0]));
+  connInf[room].score[idArray[0]].score += finalScore.scoreList[finalScore.scoreList.length - 1];
+  console.log(connInf[room].score);
 
 
   io.to(room).emit("showScore", JSON.stringify(finalScore), word);
@@ -202,9 +207,12 @@ io.on("connection", (socket) => {
           let message = creator.createMessage(name, " guessed the word.", true, true, false);
           io.to(room).emit("yourMessage", JSON.stringify(message));
           connInf[room].answered[socket.id] = parseInt(time);
+          connInf[room].score[socket.id].answered = true;
+          io.to(room).emit("answerCorrect", socket.id);
           if (Object.keys(connInf[room].answered).length == connInf[room].numberOfPlayers) {
             showScore(room);
           }
+
         }
         else {
           let message = creator.createMessage(name, text, false, false, false);
@@ -271,7 +279,8 @@ io.on("connection", (socket) => {
           playerTurns: [],
           numOfReady: 0,
           gameState: {},
-          answered: {}
+          answered: {},
+          score: {}
         }
       }
       codeExists(false);
@@ -282,17 +291,21 @@ io.on("connection", (socket) => {
     let p = creator.createPlayer(
       name,
       host,
-      socket.id
+      socket.id,
+      false
     );
 
     socketRooms[socket.id] = room;
     connInf[room].allPlayers[socket.id] = p;
     connInf[room].numberOfPlayers += 1;
     connInf[room].playerTurns.push(socket.id);
+    connInf[room].score[socket.id] = creator.createScore(name, false, 0, false, socket.id);
+
 
     socket.join(room);
     callback(JSON.stringify(p));
     io.to(room).emit("allPlayers", connInf[room].allPlayers);
+    io.to(room).emit("totalScores", connInf[room].score);
   });
 
   socket.on("setGameInformation", (gameInfo) => {
@@ -340,6 +353,7 @@ io.on("connection", (socket) => {
   socket.on("ready", () => {
     let room = socketRooms[socket.id];
     connInf[room].numOfReady += 1;
+    connInf[room].allPlayers[socket.id].ready = true;
     if (connInf[room].gameState.ready == false) {
       if (connInf[room].numOfReady == connInf[room].numberOfPlayers) {
         chooseWord(room);
@@ -361,10 +375,17 @@ io.on("connection", (socket) => {
   socket.on("disconnect", (reason) => {
     let room = socketRooms[socket.id];
     if (room) {
+      if (connInf[room].allPlayers[socket.id].host && connInf[room].numberOfPlayers > 1) {
+        let nextHost = connInf[room].allPlayers[connInf[room].playerTurns[1]];
+        nextHost = creator.createPlayer(
+          nextHost.name, 'true', nextHost.socketId, nextHost.ready
+        )
+        io.to(nextHost.socketId).emit("beHost");
+        connInf[room].allPlayers[nextHost.socketId] = nextHost;
+      }
       delete connInf[room].allPlayers[socket.id];
       connInf[room].playerTurns.splice(connInf[room].playerTurns.indexOf(socket.id), 1);
       connInf[room].numberOfPlayers -= 1;
-      connInf[room].numOfReady -= 1;
       if (connInf[room].numberOfPlayers == 0) {
         clearInterval(connInf[room].chooseTimer);
         clearInterval(connInf[room].gameTimer);
@@ -375,9 +396,11 @@ io.on("connection", (socket) => {
       }
       delete socketRooms[socket.id];
     }
+    console.log(connInf);
     console.log(reason);
   });
 
+  console.log(connInf);
 
 })
 
