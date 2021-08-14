@@ -4,6 +4,7 @@ import * as helper from "./libs/helper.js"
 
 
 import express from "express";
+import util from "util";
 import http from "http";
 import { Server } from "socket.io";
 import path from "path";
@@ -29,6 +30,18 @@ var socketRooms = {
 }
 
 
+const resetEverythingInRoom = (room) => {
+  connInf[room].numOfReady = 0;
+  connInf[room].gameInformations.started = false;
+  connInf[room].gameState.ready = false;
+
+  for (let id in connInf[room].score) {
+    if (connInf[room].score.hasOwnProperty(id)) {
+      connInf[room].score[id].score = 0;
+    }
+  }
+  io.to(room).emit("totalScores", connInf[room].score);
+}
 
 
 
@@ -104,31 +117,25 @@ function startGameTimer(room) {
   }, 1000);
 }
 
-function showScore(room) {
-  clearInterval(connInf[room].gameTimer);
-  let word = connInf[room].gameState.chosenWord;
-  connInf[room].gameState.chosenWord = null;
-
+function calculateScore(room) {
   let allIds = Object.keys(connInf[room].allPlayers);
   let totalPlayers = allIds.length;
 
   allIds.forEach((id) => {
-
     if (!(id in connInf[room].answered)) {
       connInf[room].answered[id] = 0
     }
-  });
+  })
 
   let finalScore = {
     nameList: [],
     scoreList: []
-  };
+  }
+
   let totalTime = myConstants.time[connInf[room].gameInformations.time];
 
   let idArray = Object.keys(connInf[room].answered);
   let sumOfTime = 0;
-
-
   for (let i = 1; i < idArray.length; i++) {
     if (connInf[room].answered[idArray[i]] == 0) {
       finalScore.nameList.push(connInf[room].allPlayers[idArray[i]].name);
@@ -137,20 +144,42 @@ function showScore(room) {
       finalScore.nameList.push(connInf[room].allPlayers[idArray[i]].name);
       finalScore.scoreList.push(Math.round(((connInf[room].answered[idArray[i]] + (totalTime / 2)) / totalTime) * 350 - (i * 25)));
     }
-    console.log(connInf[room].score);
     sumOfTime += connInf[room].answered[idArray[i]];
     connInf[room].score[idArray[i]].score += finalScore.scoreList[i - 1];
   }
   finalScore.nameList.push(connInf[room].allPlayers[idArray[0]].name);
   finalScore.scoreList.push(Math.round(sumOfTime / (totalPlayers * totalTime) * finalScore.scoreList[0]));
+
   connInf[room].score[idArray[0]].score += finalScore.scoreList[finalScore.scoreList.length - 1];
-  console.log(connInf[room].score);
+  return finalScore;
+}
 
+function startNextRound(room, turn, round) {
+  io.to(room).emit("makeAllAnswerIncorrect");
 
-  io.to(room).emit("showScore", JSON.stringify(finalScore), word);
-  connInf[room].answered = {};
+  connInf[room].gameState = creator.createGameState
+    (
+      round, turn, true,
+      connInf[room].allPlayers[connInf[room].playerTurns[turn]].name,
+      connInf[room].playerTurns[turn],
+      null
+    )
+  chooseWord(room);
+}
+
+function startNewGame(room) {
+  io.to(room).emit("totalScores", connInf[room].score);
+  io.to(room).emit("showFinalScore");
+
+  connInf[room].restartTimer = setTimeout(() => {
+    resetEverythingInRoom(room);
+    io.to(room).emit("restartGame");
+
+  }, 7000)
+}
+function setScoreTimer(room) {
   connInf[room].scoreTimer = setTimeout(() => {
-    io.to(room).emit("hideScore");
+
     let totalRounds = myConstants.rounds[connInf[room].gameInformations.rounds];
     let totalPlayers = connInf[room].numberOfPlayers;
     let initialTurn = connInf[room].gameState.turn;
@@ -166,20 +195,26 @@ function showScore(room) {
     }
     io.to(room).emit(myConstants.RENEW_BOARD);
     if (finalRound == totalRounds) {
-      io.to(room).emit("gameFinished");
+      startNewGame(room);
     } else {
-      connInf[room].gameState = creator.createGameState
-        (
-          finalRound, finalTurn, true,
-          connInf[room].allPlayers[connInf[room].playerTurns[finalTurn]].name,
-          connInf[room].playerTurns[finalTurn],
-          null
-        )
-      chooseWord(room);
+      startNextRound(room, finalTurn, finalRound);
     }
 
-  }, 5000);
+  }, 5000)
+}
 
+function showScore(room) {
+  clearInterval(connInf[room].gameTimer);
+  let word = connInf[room].gameState.chosenWord;
+  connInf[room].gameState.chosenWord = null;
+
+  let finalScore = calculateScore(room);
+
+  io.to(room).emit("showScore", JSON.stringify(finalScore), word);
+
+  connInf[room].answered = {};
+
+  setScoreTimer(room);
 
 }
 
@@ -188,6 +223,10 @@ io.on("connection", (socket) => {
   console.log("Connected");
 
   socket.on("message", (text, time) => {
+
+
+
+    console.log(util.inspect(connInf, false, null, true /* enable colors */))
     let room = socketRooms[socket.id];
     let name = connInf[room].allPlayers[socket.id].name;
     let chosenWord = connInf[room].gameState.chosenWord;
@@ -228,6 +267,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on(myConstants.DRAWER_CLEAR, () => {
+    console.log("d");
     socket.to(socketRooms[socket.id]).emit(myConstants.RECEIVER_CLEAR);
   })
 
@@ -264,7 +304,7 @@ io.on("connection", (socket) => {
 
 
   socket.on("getGameState", () => {
-    socket.emit("gameState", JSON.stringify(connInf[socketRooms[socket.id]].gameState));
+    socket.to(socketRooms[socket.id]).emit("gameState", JSON.stringify(connInf[socketRooms[socket.id]].gameState));
   })
 
 
@@ -351,6 +391,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("ready", () => {
+
     let room = socketRooms[socket.id];
     connInf[room].numOfReady += 1;
     connInf[room].allPlayers[socket.id].ready = true;
@@ -391,9 +432,11 @@ io.on("connection", (socket) => {
         clearInterval(connInf[room].chooseTimer);
         clearInterval(connInf[room].gameTimer);
         clearTimeout(connInf[room].scoreTimer);
+        clearTimeout(connInf[room].restartTimer);
         delete connInf[room];
       } else {
         io.to(room).emit("allPlayers", connInf[room].allPlayers);
+        io.to(room).emit("totalScores", connInf[room].score);
       }
       delete socketRooms[socket.id];
     }
