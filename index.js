@@ -428,7 +428,7 @@ io.on("connection", (socket) => {
       connInf[room].playerTurns.splice(connInf[room].playerTurns.indexOf(socket.id), 1);
       connInf[room].numberOfPlayers -= 1;
       delete connInf[room].score[socket.id];
-      if (connInf[room].numberOfPlayers == 0) {
+      if (connInf[room].numberOfPlayers === 0) {
         clearInterval(connInf[room].chooseTimer);
         clearInterval(connInf[room].gameTimer);
         clearTimeout(connInf[room].scoreTimer);
