@@ -20,14 +20,10 @@ app.set('port', PORT);
 
 
 //CONNECTION INFORMATION
-var connInf = {
-
-}
+const connInf = {};
 
 //FOR STORING THE ROOM OF THE SOCKET
-var socketRooms = {
-
-}
+const socketRooms = {};
 
 
 const resetEverythingInRoom = (room) => {
@@ -451,5 +447,5 @@ io.on("connection", (socket) => {
 
 
 server.listen(PORT, () => {
-  console.log(`Listening on ${PORT}`);
+  console.log(`Listening ondf ${PORT}`);
 });
